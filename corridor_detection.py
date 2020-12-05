@@ -8,7 +8,7 @@
                               -------------------
         begin                : 2020-10-09
         git sha              : $Format:%H$
-        copyright            : (C) 2020 by Metehan Ergen / Hacettepe University - Politecnico di Milano
+        copyright            : (C) 2020 by Metehan Ergen / Hacettepe University | Politecnico di Milano
         email                : metehan.ergenn@gmail.com
  ***************************************************************************/
 
