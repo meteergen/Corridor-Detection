@@ -30,6 +30,7 @@ from qgis.utils import iface                                         #Imported m
 from PyQt5.QtCore import QVariant
 from PyQt5.QtGui import *
 
+
 # Initialize Qt resources from file resources.py
 from .resources import *
 # Import the code for the dialog
@@ -552,10 +553,14 @@ class CorridorDetection():
             
             
         self.clear_ui()
-        
-        layers, lineLayers_shp, fieldNamesLayer = self.loadLayerList()
-        if len(layers) == 0:
+        try:
+            layers, lineLayers_shp, fieldNamesLayer = self.loadLayerList()
+            if len(layers) == 0:
+                return
+        except:
+            iface.messageBar().pushMessage("Error", "There is no vector layer on interface", level=Qgis.Critical)
             return
+        
 
         # show the dialog
         self.dlg.show()
@@ -621,53 +626,123 @@ class selectTool(QgsMapToolIdentifyFeature):
         dirs = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW']
         ix = round(d / (360. / len(dirs)))
         return dirs[ix % len(dirs)]
+
+    # Creates selection tool and selects features when clicked
+    # event.button() gives the event's source button (right click : 2, left click : 1)
+    def canvasPressEvent(self, event):
         
-    def canvasPressEvent(self, event):                              # Creates selection tool and selects Multiple features when clicked
         found_features = self.identify(event.x(), event.y(), [self.layer], QgsMapToolIdentify.DefaultQgsSetting)
 
         if not len(found_features) > 2:
             if not len(found_features) == 0:
-
-                if not len(self.nodes) == 0:
-                    lastSegment = self.nodes[-1]
-                    
-                    for i in self.layer.selectedFeatures():
-                        if i[self.field] == lastSegment:
-                            self.lastSegment = i
-                            
-                    print(lastSegment)
+                if event.button() == 1:
                 
-                if len(self.nodes) == 0:
-                
-                    self.deselectedSegmentIndex = 0
+                    if not len(self.nodes) == 0:
+                        lastSegment = self.nodes[-1]
                         
-                    if len(found_features) == 2:
-                        firstSegment = found_features[0].mFeature
-                        secondSegment = found_features[1].mFeature
-                        firstSegmentStr = firstSegment[self.field],self.degree_to_cardinal(180/math.pi*QgsGeometryUtils.lineAngle(firstSegment.geometry().constGet()[0][0].x(), firstSegment.geometry().constGet()[0][0].y(), firstSegment.geometry().constGet()[0][1].x(), firstSegment.geometry().constGet()[0][1].y() ))
-                        secondSegmentStr = secondSegment[self.field],self.degree_to_cardinal(180/math.pi*QgsGeometryUtils.lineAngle(secondSegment.geometry().constGet()[0][0].x(), secondSegment.geometry().constGet()[0][0].y(), secondSegment.geometry().constGet()[0][1].x(), secondSegment.geometry().constGet()[0][1].y() ))
-                        try:
-                            answer = int(self.obj.inputDialog(firstSegmentStr,secondSegmentStr))
-                        except:
-                            answer = False
-
-                        if answer == 1 or answer == 2:
-                            self.nodes.insert(self.deselectedSegmentIndex,found_features[answer-1].mFeature[self.field])
-                            self.layer.selectByIds([found_features[answer-1].mFeature.id()], QgsVectorLayer.AddToSelection)
-                           
-                            
-                            
-                        
-                        
-                    else:
-                        self.nodes.insert(self.deselectedSegmentIndex,found_features[0].mFeature[self.field])
-                        self.layer.selectByIds([found_features[0].mFeature.id()], QgsVectorLayer.AddToSelection)
-                    self.deselectedSegmentIndex += 1
+                        for i in self.layer.selectedFeatures():
+                            if i[self.field] == lastSegment:
+                                self.lastSegment = i
+                                
+                        print(lastSegment)
                     
+                    if len(self.nodes) == 0:
+                    
+                        self.deselectedSegmentIndex = 0
+                            
+                        if len(found_features) == 2:
+                            firstSegment = found_features[0].mFeature
+                            secondSegment = found_features[1].mFeature
+                            firstSegmentStr = firstSegment[self.field],self.degree_to_cardinal(180/math.pi*QgsGeometryUtils.lineAngle(firstSegment.geometry().constGet()[0][0].x(), firstSegment.geometry().constGet()[0][0].y(), firstSegment.geometry().constGet()[0][1].x(), firstSegment.geometry().constGet()[0][1].y() ))
+                            secondSegmentStr = secondSegment[self.field],self.degree_to_cardinal(180/math.pi*QgsGeometryUtils.lineAngle(secondSegment.geometry().constGet()[0][0].x(), secondSegment.geometry().constGet()[0][0].y(), secondSegment.geometry().constGet()[0][1].x(), secondSegment.geometry().constGet()[0][1].y() ))
+                            try:
+                                answer = int(self.obj.inputDialog(firstSegmentStr,secondSegmentStr))
+                            except:
+                                answer = False
 
-                elif self.obj.dlg.checkBoxManuel.isChecked():
+                            if answer == 1 or answer == 2:
+                                self.nodes.insert(self.deselectedSegmentIndex,found_features[answer-1].mFeature[self.field])
+                                self.layer.selectByIds([found_features[answer-1].mFeature.id()], QgsVectorLayer.AddToSelection)
 
-                    if len(found_features) == 1:
+                        else:
+                            self.nodes.insert(self.deselectedSegmentIndex,found_features[0].mFeature[self.field])
+                            self.layer.selectByIds([found_features[0].mFeature.id()], QgsVectorLayer.AddToSelection)
+                        self.deselectedSegmentIndex += 1
+                        
+                    # Manual Editing
+                    elif self.obj.dlg.checkBoxManuel.isChecked():
+
+                        if len(found_features) == 1:
+                            for i in range(len(found_features)):
+                                if found_features[i].mFeature[self.field] in self.nodes:
+                                    self.layer.deselect(found_features[i].mFeature.id())
+                                    for j in range(len(self.nodes)):
+                                        if found_features[i].mFeature[self.field] == self.nodes[j]:
+                                            self.deselectedSegmentIndex = j
+                                            del self.nodes[j]
+                                            break
+                                else:
+                                    self.nodes.insert(self.deselectedSegmentIndex,found_features[i].mFeature[self.field])
+                                    self.deselectedSegmentIndex += 1
+                                    self.layer.selectByIds([found_features[i].mFeature.id()], QgsVectorLayer.AddToSelection)
+                            
+                        elif len(found_features) == 2:
+                            check = True
+                            dell = False
+                            firstSegment = found_features[0].mFeature
+                            secondSegment = found_features[1].mFeature
+                            firstSegmentStr = firstSegment[self.field],self.degree_to_cardinal(180/math.pi*QgsGeometryUtils.lineAngle(firstSegment.geometry().constGet()[0][0].x(), firstSegment.geometry().constGet()[0][0].y(), firstSegment.geometry().constGet()[0][1].x(), firstSegment.geometry().constGet()[0][1].y() ))
+                            secondSegmentStr = secondSegment[self.field],self.degree_to_cardinal(180/math.pi*QgsGeometryUtils.lineAngle(secondSegment.geometry().constGet()[0][0].x(), secondSegment.geometry().constGet()[0][0].y(), secondSegment.geometry().constGet()[0][1].x(), secondSegment.geometry().constGet()[0][1].y() ))
+                            try:
+                                answer = int(self.obj.inputDialog(firstSegmentStr,secondSegmentStr))
+                            except:
+                                answer = False
+
+                            if answer == 1:
+                                
+                                for j in range(len(self.nodes)):
+                                    if found_features[answer-1].mFeature[self.field] == self.nodes[j]:
+                                        self.layer.deselect(found_features[answer-1].mFeature.id())
+                                        self.deselectedSegmentIndex = j
+                                        dell = True
+                                        check = False
+                                        
+                                    if found_features[answer].mFeature[self.field] == self.nodes[j]:
+                                        self.layer.deselect(found_features[answer].mFeature.id())
+                                        self.deselectedSegmentIndex = j
+                                        dell = True
+                                       
+                                if dell == True:
+                                    del self.nodes[self.deselectedSegmentIndex]
+                                if check == True:
+                                    self.nodes.insert(self.deselectedSegmentIndex,found_features[answer-1].mFeature[self.field])
+                                    self.layer.selectByIds([found_features[answer-1].mFeature.id()], QgsVectorLayer.AddToSelection)
+                                    self.deselectedSegmentIndex += 1
+                                    
+                            elif answer == 2:
+                                for j in range(len(self.nodes)):
+                                    if found_features[answer-1].mFeature[self.field] == self.nodes[j]:
+                                        self.layer.deselect(found_features[answer-1].mFeature.id())
+                                        self.deselectedSegmentIndex = j
+                                        dell = True
+                                        check = False
+                                        
+                                    if found_features[answer-2].mFeature[self.field] == self.nodes[j]:
+                                        self.layer.deselect(found_features[answer-2].mFeature.id())
+                                        self.deselectedSegmentIndex = j
+                                        dell = True
+                                        
+                                if dell == True:
+                                    del self.nodes[self.deselectedSegmentIndex]
+                                    
+                                if check == True:
+                                    self.nodes.insert(self.deselectedSegmentIndex,found_features[answer-1].mFeature[self.field])
+                                    self.layer.selectByIds([found_features[answer-1].mFeature.id()], QgsVectorLayer.AddToSelection)
+                                    self.deselectedSegmentIndex += 1
+
+                    # If only one feature found when clicked
+                    elif len(found_features) == 1:
+
                         for i in range(len(found_features)):
                             if found_features[i].mFeature[self.field] in self.nodes:
                                 self.layer.deselect(found_features[i].mFeature.id())
@@ -679,115 +754,66 @@ class selectTool(QgsMapToolIdentifyFeature):
                             else:
                                 self.nodes.insert(self.deselectedSegmentIndex,found_features[i].mFeature[self.field])
                                 self.deselectedSegmentIndex += 1
+                                #self.lastSegment = found_features[i]
                                 self.layer.selectByIds([found_features[i].mFeature.id()], QgsVectorLayer.AddToSelection)
-                        
-                        
 
+                    # If two features found when clicked 
                     elif len(found_features) == 2:
-                        check = True
-                        dell = False
-                        firstSegment = found_features[0].mFeature
-                        secondSegment = found_features[1].mFeature
-                        firstSegmentStr = firstSegment[self.field],self.degree_to_cardinal(180/math.pi*QgsGeometryUtils.lineAngle(firstSegment.geometry().constGet()[0][0].x(), firstSegment.geometry().constGet()[0][0].y(), firstSegment.geometry().constGet()[0][1].x(), firstSegment.geometry().constGet()[0][1].y() ))
-                        secondSegmentStr = secondSegment[self.field],self.degree_to_cardinal(180/math.pi*QgsGeometryUtils.lineAngle(secondSegment.geometry().constGet()[0][0].x(), secondSegment.geometry().constGet()[0][0].y(), secondSegment.geometry().constGet()[0][1].x(), secondSegment.geometry().constGet()[0][1].y() ))
-                        try:
-                            answer = int(self.obj.inputDialog(firstSegmentStr,secondSegmentStr))
-                        except:
-                            answer = False
-
-                        if answer == 1:
+                        chooseSegmentList = []
+                        for i in range(len(found_features)):
+                            if found_features[i].mFeature[self.field] in self.nodes:
+                                self.layer.deselect(found_features[i].mFeature.id())
+                                for j in range(len(self.nodes)):
+                                    if found_features[i].mFeature[self.field] == self.nodes[j]:
+                                        self.deselectedSegmentIndex = j
+                                        del self.nodes[j]
+                                        break   
+                            else:
+                                chooseSegmentList.append(found_features[i])
+                                
+                        if len(chooseSegmentList) == 2:
+                            lastFeaturePoint = self.lastSegment.geometry().constGet()[0][0]
+                            first = chooseSegmentList[0].mFeature.geometry().constGet()[0][0]
+                            second = chooseSegmentList[1].mFeature.geometry().constGet()[0][0]
                             
-                            
-                            for j in range(len(self.nodes)):
-                                if found_features[answer-1].mFeature[self.field] == self.nodes[j]:
-                                    self.layer.deselect(found_features[answer-1].mFeature.id())
-                                    self.deselectedSegmentIndex = j
-                                    dell = True
-                                    check = False
-                                    
-                                if found_features[answer].mFeature[self.field] == self.nodes[j]:
-                                    self.layer.deselect(found_features[answer].mFeature.id())
-                                    self.deselectedSegmentIndex = j
-                                    dell = True
-                                   
-                            if dell == True:
-                                del self.nodes[self.deselectedSegmentIndex]
-                            if check == True:
-                                self.nodes.insert(self.deselectedSegmentIndex,found_features[answer-1].mFeature[self.field])
-                                self.layer.selectByIds([found_features[answer-1].mFeature.id()], QgsVectorLayer.AddToSelection)
-                                self.deselectedSegmentIndex += 1
-                                
-                        elif answer == 2:
-                            for j in range(len(self.nodes)):
-                                if found_features[answer-1].mFeature[self.field] == self.nodes[j]:
-                                    self.layer.deselect(found_features[answer-1].mFeature.id())
-                                    self.deselectedSegmentIndex = j
-                                    dell = True
-                                    check = False
-                                    
-                                if found_features[answer-2].mFeature[self.field] == self.nodes[j]:
-                                    self.layer.deselect(found_features[answer-2].mFeature.id())
-                                    self.deselectedSegmentIndex = j
-                                    dell = True
-                                    
-                            if dell == True:
-                                del self.nodes[self.deselectedSegmentIndex]
-                                
-                            if check == True:
-                                self.nodes.insert(self.deselectedSegmentIndex,found_features[answer-1].mFeature[self.field])
-                                self.layer.selectByIds([found_features[answer-1].mFeature.id()], QgsVectorLayer.AddToSelection)
-                                self.deselectedSegmentIndex += 1
-                             
-                                
+                            if lastFeaturePoint.distance(first) < lastFeaturePoint.distance(second):
+                                self.nodes.insert(self.deselectedSegmentIndex,chooseSegmentList[0].mFeature[self.field])
+                                self.layer.selectByIds([chooseSegmentList[0].mFeature.id()], QgsVectorLayer.AddToSelection)
 
-                elif len(found_features) == 1:
-
-                    for i in range(len(found_features)):
-                        if found_features[i].mFeature[self.field] in self.nodes:
-                            self.layer.deselect(found_features[i].mFeature.id())
-                            for j in range(len(self.nodes)):
-                                if found_features[i].mFeature[self.field] == self.nodes[j]:
-                                    self.deselectedSegmentIndex = j
-                                    del self.nodes[j]
-                                    break
-                        else:
-                            self.nodes.insert(self.deselectedSegmentIndex,found_features[i].mFeature[self.field])
+                            else:
+                                self.nodes.insert(self.deselectedSegmentIndex,chooseSegmentList[1].mFeature[self.field])
+                                self.layer.selectByIds([chooseSegmentList[1].mFeature.id()], QgsVectorLayer.AddToSelection)
                             self.deselectedSegmentIndex += 1
-                            #self.lastSegment = found_features[i]
-                            self.layer.selectByIds([found_features[i].mFeature.id()], QgsVectorLayer.AddToSelection)
-                       
-                elif len(found_features) == 2:
-                    chooseSegmentList = []
-                    for i in range(len(found_features)):
-                        if found_features[i].mFeature[self.field] in self.nodes:
-                            self.layer.deselect(found_features[i].mFeature.id())
-                            for j in range(len(self.nodes)):
-                                if found_features[i].mFeature[self.field] == self.nodes[j]:
-                                    self.deselectedSegmentIndex = j
-                                    del self.nodes[j]
-                                    break
-                                
-                        else:
-                            chooseSegmentList.append(found_features[i])
                             
-                            
-                    if len(chooseSegmentList) == 2:
-                        lastFeaturePoint = self.lastSegment.geometry().constGet()[0][0]
-                        first = chooseSegmentList[0].mFeature.geometry().constGet()[0][0]
-                        second = chooseSegmentList[1].mFeature.geometry().constGet()[0][0]
-                        
-                        if lastFeaturePoint.distance(first) < lastFeaturePoint.distance(second):
-                            self.nodes.insert(self.deselectedSegmentIndex,chooseSegmentList[0].mFeature[self.field])
-                            self.layer.selectByIds([chooseSegmentList[0].mFeature.id()], QgsVectorLayer.AddToSelection)
-                
-                            
-                            
-                        else:
-                            self.nodes.insert(self.deselectedSegmentIndex,chooseSegmentList[1].mFeature[self.field])
-                            self.layer.selectByIds([chooseSegmentList[1].mFeature.id()], QgsVectorLayer.AddToSelection)
+                elif event.button() == 2:   # If there is a right click (User should warn if there are twin segments )
+                    if len(found_features) == 2:
+                        featureOne = found_features[0].mFeature
+                        featureTwo = found_features[1].mFeature
+                        geomOne = featureOne.geometry()
+                        geomTwo = featureTwo.geometry()
+                        if geomOne.constGet()[0][0].x() == geomTwo.constGet()[0][1].x():
+                            if geomOne.constGet()[0][1].y() == geomTwo.constGet()[0][0].y():
+                                print("here")
+                                try:
+                                    # Delete the founded one
+                                    index = self.nodes.index(featureOne[self.field])
+                                    self.layer.deselect(featureOne.id())
+                                    del self.nodes[index]
+                                    tempIndex = index
+                                    # Add the other twin to selection
+                                    self.nodes.insert(tempIndex,featureTwo[self.field])
+                                    self.layer.selectByIds([featureTwo.id()], QgsVectorLayer.AddToSelection)
+                                    
+                                except ValueError:
+                                    # Delete the founded one
+                                    index = self.nodes.index(featureTwo[self.field])
+                                    self.layer.deselect(featureTwo.id())
+                                    del self.nodes[index]
+                                    tempIndex = index
+                                     # Add the other twin to selection
+                                    self.nodes.insert(tempIndex,featureOne[self.field])
+                                    self.layer.selectByIds([featureOne.id()], QgsVectorLayer.AddToSelection)
 
-                            
-                        self.deselectedSegmentIndex += 1
-
+                      
         self.obj.displayPath(self.nodes)
         
