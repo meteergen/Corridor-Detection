@@ -35,6 +35,8 @@ from PyQt5.QtGui import *
 from .resources import *
 # Import the code for the dialog
 from .corridor_detection_dialog import CorridorDetectionDialog
+from .corridor_detection_selection_dialog import SelectionDialog
+
 import os.path
 import csv
 import networkx as nx
@@ -535,6 +537,8 @@ class CorridorDetection():
         # apply the renderer to the layer
         self.selectedLineLayer.setRenderer(renderer)
         """
+    def buttonValue(self,val):
+        self.t.buttonValue = val
                 
     def run(self):
         """Run method that performs all the real work"""
@@ -544,6 +548,10 @@ class CorridorDetection():
         # Only create GUI ONCE in callback, so that it will only load when the plugin is started
         if self.first_start == True:
             self.first_start = False
+            self.dlg_Selection = SelectionDialog()
+            # Really important: The only way to pass arguments to a function with connect is lambda
+            self.dlg_Selection.firstButton.clicked.connect(lambda: self.buttonValue(0))
+            self.dlg_Selection.secondButton.clicked.connect(lambda: self.buttonValue(1))
             self.dlg = CorridorDetectionDialog()
             self.dlg.toolButtonAdj.clicked.connect(self.select_adj_file)
             self.dlg.toolButtonOut.clicked.connect(self.select_output_file)
@@ -569,6 +577,7 @@ class CorridorDetection():
         selectedLayer = lineLayers_shp[selectedLayerIndex]
 
         self.t = selectTool(self.iface,selectedLayer,self)
+        
         #self.t.featureIdentified.connect(self.t.onFeatureIdentified) # Selecting only one
         
         self.load_comboBox()
@@ -591,7 +600,10 @@ class selectTool(QgsMapToolIdentifyFeature):
         self.obj = obj
         self.field = ""
         self.deselectedSegmentIndex = False
+        self.buttonValue = False
         QgsMapToolIdentifyFeature.__init__(self, self.canvas, self.layer)
+        
+        
  
     # If active layer changed, remove selection and initialize selection list.   
     def active_changed(self, layer):            
@@ -620,7 +632,6 @@ class selectTool(QgsMapToolIdentifyFeature):
         self.exp = self.convertPath2SQL(path)
         self.layer.selectByExpression(self.exp)
 
-    
     def degree_to_cardinal(self,d):
         
         dirs = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW']
@@ -655,11 +666,16 @@ class selectTool(QgsMapToolIdentifyFeature):
                             secondSegment = found_features[1].mFeature
                             firstSegmentStr = firstSegment[self.field],self.degree_to_cardinal(180/math.pi*QgsGeometryUtils.lineAngle(firstSegment.geometry().constGet()[0][0].x(), firstSegment.geometry().constGet()[0][0].y(), firstSegment.geometry().constGet()[0][1].x(), firstSegment.geometry().constGet()[0][1].y() ))
                             secondSegmentStr = secondSegment[self.field],self.degree_to_cardinal(180/math.pi*QgsGeometryUtils.lineAngle(secondSegment.geometry().constGet()[0][0].x(), secondSegment.geometry().constGet()[0][0].y(), secondSegment.geometry().constGet()[0][1].x(), secondSegment.geometry().constGet()[0][1].y() ))
-                            try:
-                                answer = int(self.obj.inputDialog(firstSegmentStr,secondSegmentStr))
-                            except:
-                                answer = False
-
+                     
+                            self.obj.dlg_Selection.firstButton.setText(str(firstSegmentStr))
+                            self.obj.dlg_Selection.secondButton.setText(str(secondSegmentStr))
+                            self.obj.dlg_Selection.show()
+                         
+                            result = self.obj.dlg_Selection.exec_()
+                            answer = False
+                            if result:
+                                answer = self.buttonValue+1
+                            
                             if answer == 1 or answer == 2:
                                 self.nodes.insert(self.deselectedSegmentIndex,found_features[answer-1].mFeature[self.field])
                                 self.layer.selectByIds([found_features[answer-1].mFeature.id()], QgsVectorLayer.AddToSelection)
@@ -793,7 +809,6 @@ class selectTool(QgsMapToolIdentifyFeature):
                         geomTwo = featureTwo.geometry()
                         if geomOne.constGet()[0][0].x() == geomTwo.constGet()[0][1].x():
                             if geomOne.constGet()[0][1].y() == geomTwo.constGet()[0][0].y():
-                                print("here")
                                 try:
                                     # Delete the founded one
                                     index = self.nodes.index(featureOne[self.field])
