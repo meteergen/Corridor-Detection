@@ -42,6 +42,9 @@ import csv
 import networkx as nx
 import math
 import datetime
+import time
+
+
 
 
         
@@ -221,48 +224,23 @@ class CorridorDetection():
     
     # Dijktras Algorithm for detection of corridors
     def runAlgorithm(self):
+        t0 = time.time()
 
-        # Create empty dictionaries
-        adj_matrix = dict()
-        visited = dict()
-        print(self.dlg.lineEdit.text())
+
         
-        # Open the adjacency matrix provided
         self.corridor_segments = self.t.nodes[::-1]
-
+        
         if len(self.corridor_segments) < 2:
             self.error_msg("Select at least two segments !")
             return False
-
-        try:
-            with open(self.dlg.lineEdit.text()) as csv_file:    
-                csv_reader = csv.reader(csv_file, delimiter=',')
-                line_count = 0
-                for row in csv_reader:
-                    """
-                    if line_count == 0:
-                        line_count += 1
-                    elif(line_count==1): # strangely there is an empty line
-                        line_count += 1
-                    elif(line_count>=1):
-                    """
-                    #print("Eleman sayisi: ", len(row), row)
-                    adj_matrix[row[0]] = row[1:len(row)]
-                    visited[row[0]] = False
-                    #print("Segment", row[0], "'s neighbors:",  adj_matrix[row[0]])
-                    line_count += 1
-        except:
-            self.error_msg("Please select a proper adjacency matrix file !")
-            return False
-
         # Create a directed graph
         G = nx.DiGraph()
 
         # Add the segments to the graph 
         # The cost of each segment is assumed to be 1 - this could be updated for different purposes
-        for segment in adj_matrix:
-            for neigh in range(len(adj_matrix[segment])):
-                G.add_weighted_edges_from( [(segment, adj_matrix[segment][neigh], {'distance':1})] ) 
+        for segment in self.adj_matrix:
+            for neigh in range(len(self.adj_matrix[segment])):
+                G.add_weighted_edges_from( [(segment, self.adj_matrix[segment][neigh], {'distance':1})] ) 
         
         self.path = []
         for c in range(len(self.corridor_segments)-1):
@@ -282,6 +260,9 @@ class CorridorDetection():
         # Fix: they should be selected by their object id's.
         self.t.selectFeatures(self.path)
         #self.selectedLineLayer.selectByExpression(res)
+        t1 = time.time()
+        total = t1-t0
+        print("runtime: ",total)
 
     def visualize(self):
         if not len(self.path) < 1:
@@ -406,6 +387,35 @@ class CorridorDetection():
         filename, _filter = QFileDialog.getOpenFileName(self.dlg, "Select adj file ")
         self.dlg.lineEdit.setText(filename)
 
+        # Create empty dictionaries
+        adj_matrix = dict()
+        #visited = dict()
+        print("TEST PROTOCOL 444")
+        print(self.dlg.lineEdit.text())
+        
+        # Open the adjacency matrix provided
+        try:
+            with open(self.dlg.lineEdit.text()) as csv_file:    
+                csv_reader = csv.reader(csv_file, delimiter=',')
+                line_count = 0
+                for row in csv_reader:
+                    """
+                    if line_count == 0:
+                        line_count += 1
+                    elif(line_count==1): # strangely there is an empty line
+                        line_count += 1
+                    elif(line_count>=1):
+                    """
+                    #print("Eleman sayisi: ", len(row), row)
+                    adj_matrix[row[0]] = row[1:len(row)]
+                    #visited[row[0]] = False
+                    #print("Segment", row[0], "'s neighbors:",  adj_matrix[row[0]])
+                    line_count += 1
+        except:
+            self.error_msg("Please select a proper adjacency matrix file !")
+            return False
+        self.adj_matrix = adj_matrix
+
     def select_output_file(self):
         filename = QFileDialog.getExistingDirectory(self.dlg, "Select output file ")
         self.dlg.lineEdit_2.setText(filename)
@@ -522,7 +532,7 @@ class CorridorDetection():
            
         # See if OK was pressed
         if result:
-            
+            self.adj_matrix = False
             pass
           
 class selectTool(QgsMapToolIdentifyFeature):
