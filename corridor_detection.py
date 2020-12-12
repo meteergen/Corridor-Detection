@@ -25,9 +25,9 @@ from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction ,QMessageBox, QFileDialog, QInputDialog
 from qgis.core import *
-from qgis.gui import QgsMapToolIdentifyFeature, QgsMapToolIdentify   #Imported manually
+from qgis.gui import QgsMapToolIdentifyFeature, QgsMapToolIdentify, QgsMapToolPan  #Imported manually
 from qgis.utils import iface                                         #Imported manually
-from PyQt5.QtCore import QVariant
+from PyQt5.QtCore import QVariant, Qt, QDateTime
 from PyQt5.QtGui import *
 
 
@@ -41,7 +41,7 @@ import os.path
 import csv
 import networkx as nx
 import math
-
+import datetime
 
 
         
@@ -251,12 +251,9 @@ class CorridorDetection():
                     visited[row[0]] = False
                     #print("Segment", row[0], "'s neighbors:",  adj_matrix[row[0]])
                     line_count += 1
-                    
-                
         except:
             self.error_msg("Please select a proper adjacency matrix file !")
             return False
-     
 
         # Create a directed graph
         G = nx.DiGraph()
@@ -266,8 +263,6 @@ class CorridorDetection():
         for segment in adj_matrix:
             for neigh in range(len(adj_matrix[segment])):
                 G.add_weighted_edges_from( [(segment, adj_matrix[segment][neigh], {'distance':1})] ) 
-
-    
         
         self.path = []
         for c in range(len(self.corridor_segments)-1):
@@ -284,8 +279,27 @@ class CorridorDetection():
         # str1 = "["+', '.join(str(e) for e in self.path)+"]"
         # self.dlg.textBrowser_2.setText(str(str1))
 
+        # Fix: they should be selected by their object id's.
         self.t.selectFeatures(self.path)
         #self.selectedLineLayer.selectByExpression(res)
+
+    def visualize(self):
+        if not len(self.path) < 1:
+            epoch = datetime.datetime.fromisoformat('2020-12-12T12:30:59')
+            #epoch = QDateTime.fromString('2020-12-12 12:00:00','yyyy-MM-dd hh:mm:ss')
+            
+            idx = self.selectedLineLayer.fields().indexFromName("time")
+            attr_map = {}
+            for node in self.path:
+                for selectedFeature in self.selectedLineLayer.selectedFeatures():
+                    if node == selectedFeature[self.t.field]:
+                        #epoch.addSecs(30) # days, seconds, then other fields.
+                        formatted = epoch.strftime('%Y-%m-%dT%H:%M:%S')
+                        epoch = epoch + datetime.timedelta(0,60)
+                        attr_map[selectedFeature.id()] = {idx: formatted }
+
+            self.selectedLineLayer.dataProvider().changeAttributeValues(attr_map)
+                
 
         
         
@@ -294,7 +308,6 @@ class CorridorDetection():
         """Load the fields into combobox when layers are changed"""
         lineLayers_shp = []
         
-       
         layers = [layer for layer in QgsProject.instance().mapLayers().values()]
         if len(layers) != 0:  # checklayers exist in the project
             for layer in layers:
@@ -308,24 +321,17 @@ class CorridorDetection():
                     except:
                         continue
                 
-  
         self.selectedLineLayerIndex = self.dlg.layerComboBox.currentIndex()
-      
         
         if self.selectedLineLayerIndex < 0 or self.selectedLineLayerIndex > len(lineLayers_shp):
             return
         try:
-            
             self.selectedLineLayer = lineLayers_shp[self.selectedLineLayerIndex]
-            
         except:
             return
-
         
-
         fieldNamesLayer = [field.name() for field in self.selectedLineLayer.fields()]
         
-
         self.clear_fields()
         self.dlg.fieldsComboBox.addItems(fieldNamesLayer)
 
@@ -405,11 +411,7 @@ class CorridorDetection():
         self.dlg.lineEdit_2.setText(filename)
 
     def export_to_csv(self):
-        """
-        print(len(self.dlg.lineEdit_3.text()))
-        print(self.dlg.lineEdit_3.text())
-        print(self.dlg.lineEdit_2.text())
-        """
+        # There is a better control need
         if len(self.dlg.lineEdit_3.text()) < 2:
             self.error_msg("Please type the corridor id !")
             return False
@@ -440,37 +442,20 @@ class CorridorDetection():
             self.selectedLineLayer.commitChanges()
             
     def prepare_layer(self):
-
-        print("here")
-        """
-        #Configure label settings
-        settings = QgsPalLayerSettings()
-        settings.fieldName = 'myFieldName'
-        textFormat = QgsTextFormat()
-        textFormat.setSize(10)
-        settings.setFormat(textFormat)
-        #create and append a new rule
-        root = QgsRuleBasedLabeling.Rule(QgsPalLayerSettings())
-        rule = QgsRuleBasedLabeling.Rule(settings)
-        rule.setDescription(fieldName)
-        rule.setFilterExpression('myExpression')
-        root.appendChild(rule)
-        #Apply label configuration
-        rules = QgsRuleBasedLabeling(root)
-        myLayer.setLabeling(rules)
-        myLayer.triggerRepaint()
-        """
+       
         # Add selected field for rule based selection
         fields = self.selectedLineLayer.fields().names()
-        fields2add = ["visited"]
-        #self.selectedLineLayer.startEditing()
+        fields2add = ["visited","time"]
         dp = self.selectedLineLayer.dataProvider()
-        check = False
         for name in fields2add:
             if not name in fields:
-                check = True
-                dp.addAttributes([QgsField(name,QVariant.Int)])
-            else:
+                if name == 'time':
+                    dateField = QgsField(name,QVariant.DateTime)
+                    dateField.setLength(50)
+                    dp.addAttributes([dateField])
+                else:
+                    dp.addAttributes([QgsField(name,QVariant.Int)])
+            elif name == 'visited':
                 idx = self.selectedLineLayer.fields().indexFromName('visited')
                 if not idx == -1:
                     dp.deleteAttributes([idx])
@@ -480,63 +465,7 @@ class CorridorDetection():
         stylePath = "/styles/layerStyle.qml"
         self.selectedLineLayer.loadNamedStyle(os.path.dirname(__file__) + stylePath)
 
-        """
-        # Might not work
-
-        if check == False:
-            lines = [feat for feat in self.selectedLineLayer.getFeatures()]
-
-            self.selectedLineLayer.startEditing()
-            for line in lines:
-                if line["visited"] != qgis.core.NULL
-                    line["visited"] = qgis.core.NULL
-                    self.selectedLineLayer.updateFeature(line)
-            self.selectedLineLayer.commitChanges()
-
-            # Load qml file to layer on interface
-            stylePath = "/styles/layerStyle.qml"
-            self.selectedLineLayer.loadNamedStyle(os.path.dirname(__file__) + stylePath)
-        """
-        """
-        # Rule based symbology
-       
-        field = 'visited'
-        idx = self.selectedLineLayer.fields().indexFromName(field)
-        
-        
-        if not idx:
-            print ('{} does not exist'.format(field))
-        else:
-            print ('{} does exist'.format(field))
-        
-        
-        # define some rules: label, expression, color name, (min scale, max scale)
-        poi_rules = (
-        ('Visited', '"{}" = 1'.format(field), 'red', None),
-        ('Non-Visited', '"{}" = 0'.format(field), '#C0C0C0', None),)
-        # create a new rule-based renderer
-        symbol = QgsSymbol.defaultSymbol(self.selectedLineLayer.geometryType())
-        renderer = QgsRuleBasedRenderer(symbol)
-        # get the "root" rule
-        root_rule = renderer.rootRule()
-        for label, expression, color_name, scale in poi_rules:
-            # create a clone (i.e. a copy) of the default rule
-            rule = root_rule.children()[0].clone()
-            # set the label, expression and color
-            rule.setLabel(label)
-            rule.setFilterExpression(expression)
-            rule.symbol().setColor(QColor(color_name))
-            # set the scale limits if they have been specified
-            if scale is not None:
-                rule.setMinimumScale(scale[0])
-                rule.setMaximumScale(scale[1])
-            # append the rule to the list of rules
-            root_rule.appendChild(rule)
-        # delete the default rule
-        root_rule.removeChildAt(0)
-        # apply the renderer to the layer
-        self.selectedLineLayer.setRenderer(renderer)
-        """
+    # Send the selected button valueo to SelectTool class (There might be a convenient way)
     def buttonValue(self,val):
         self.t.buttonValue = val
                 
@@ -552,12 +481,17 @@ class CorridorDetection():
             # Really important: The only way to pass arguments to a function with connect is lambda
             self.dlg_Selection.firstButton.clicked.connect(lambda: self.buttonValue(0))
             self.dlg_Selection.secondButton.clicked.connect(lambda: self.buttonValue(1))
-            self.dlg = CorridorDetectionDialog()
+            self.dlg = CorridorDetectionDialog()            
             self.dlg.toolButtonAdj.clicked.connect(self.select_adj_file)
             self.dlg.toolButtonOut.clicked.connect(self.select_output_file)
             self.dlg.pushButton_2.clicked.connect(self.runAlgorithm)
             self.dlg.pushButton_csv.clicked.connect(self.export_to_csv)
             self.dlg.prepareButton.clicked.connect(self.prepare_layer)
+            self.dlg.visualizeButton.clicked.connect(self.visualize)
+
+            # Make gui always in front of qgis
+            self.dlg.setWindowFlags(Qt.WindowStaysOnTopHint)
+            self.dlg_Selection.setWindowFlags(Qt.WindowStaysOnTopHint)
             
             
         self.clear_ui()
@@ -588,6 +522,7 @@ class CorridorDetection():
            
         # See if OK was pressed
         if result:
+            
             pass
           
 class selectTool(QgsMapToolIdentifyFeature):
