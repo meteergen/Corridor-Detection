@@ -227,42 +227,45 @@ class CorridorDetection():
         t0 = time.time()
 
 
+        try:
+            self.corridor_segments = self.t.nodes[::-1]
+            
+            if len(self.corridor_segments) < 2:
+                self.error_msg("Select at least two segments !")
+                return False
+            # Create a directed graph
+            G = nx.DiGraph()
+
+            # Add the segments to the graph 
+            # The cost of each segment is assumed to be 1 - this could be updated for different purposes
+            for segment in self.adj_matrix:
+                for neigh in range(len(self.adj_matrix[segment])):
+                    G.add_weighted_edges_from( [(segment, self.adj_matrix[segment][neigh], {'distance':1})] ) 
+            
+            self.path = []
+            for c in range(len(self.corridor_segments)-1):
+                temp_path = nx.shortest_path(G, source = self.corridor_segments[c], target = self.corridor_segments[c+1])
+                # Remove the last element in the path - it will be included in the next iteration
+                temp_path.pop()
+                # if we path.append(temp_path), we will generate a 2D list. Instead copy each segment one-by-one
+                for i in range(len(temp_path)):
+                    self.path.append(temp_path[i])
+
+            # Add the last segment of the corridor
+            self.path.append(self.corridor_segments[c+1])
         
-        self.corridor_segments = self.t.nodes[::-1]
-        
-        if len(self.corridor_segments) < 2:
-            self.error_msg("Select at least two segments !")
+            # str1 = "["+', '.join(str(e) for e in self.path)+"]"
+            # self.dlg.textBrowser_2.setText(str(str1))
+
+            # Fix: they should be selected by their object id's.
+            self.t.selectFeatures(self.path)
+            #self.selectedLineLayer.selectByExpression(res)
+            t1 = time.time()
+            total = t1-t0
+            print("runtime: ",total)
+        except:
+            self.error_msg("Please select a valid adjacency file")
             return False
-        # Create a directed graph
-        G = nx.DiGraph()
-
-        # Add the segments to the graph 
-        # The cost of each segment is assumed to be 1 - this could be updated for different purposes
-        for segment in self.adj_matrix:
-            for neigh in range(len(self.adj_matrix[segment])):
-                G.add_weighted_edges_from( [(segment, self.adj_matrix[segment][neigh], {'distance':1})] ) 
-        
-        self.path = []
-        for c in range(len(self.corridor_segments)-1):
-            temp_path = nx.shortest_path(G, source = self.corridor_segments[c], target = self.corridor_segments[c+1])
-            # Remove the last element in the path - it will be included in the next iteration
-            temp_path.pop()
-            # if we path.append(temp_path), we will generate a 2D list. Instead copy each segment one-by-one
-            for i in range(len(temp_path)):
-                self.path.append(temp_path[i])
-
-        # Add the last segment of the corridor
-        self.path.append(self.corridor_segments[c+1])
-    
-        # str1 = "["+', '.join(str(e) for e in self.path)+"]"
-        # self.dlg.textBrowser_2.setText(str(str1))
-
-        # Fix: they should be selected by their object id's.
-        self.t.selectFeatures(self.path)
-        #self.selectedLineLayer.selectByExpression(res)
-        t1 = time.time()
-        total = t1-t0
-        print("runtime: ",total)
 
     def visualize(self):
         if not len(self.path) < 1:

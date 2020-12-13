@@ -26,10 +26,12 @@ import os
 
 from qgis.PyQt import uic
 from qgis.PyQt import QtWidgets
+import sys
 
 # This loads your .ui file so that PyQt can populate your plugin with the elements from Qt Designer
+sys.path.append(os.path.dirname(__file__))
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
-    os.path.dirname(__file__), 'corridor_detection_dialog_base.ui'))
+    os.path.dirname(__file__), 'corridor_detection_dialog_base.ui'),resource_suffix='')
 
 
 class CorridorDetectionDialog(QtWidgets.QDialog, FORM_CLASS):
