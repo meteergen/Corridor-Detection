@@ -266,7 +266,7 @@ class CorridorDetection():
 
     def visualize(self):
         if not len(self.path) < 1:
-            epoch = datetime.datetime.fromisoformat('2020-12-12T12:30:59')
+            epoch = datetime.datetime.fromisoformat('2020-01-01T10:00:00')
             #epoch = QDateTime.fromString('2020-12-12 12:00:00','yyyy-MM-dd hh:mm:ss')
             
             idx = self.selectedLineLayer.fields().indexFromName("time")
@@ -276,7 +276,7 @@ class CorridorDetection():
                     if node == selectedFeature[self.t.field]:
                         #epoch.addSecs(30) # days, seconds, then other fields.
                         formatted = epoch.strftime('%Y-%m-%dT%H:%M:%S')
-                        epoch = epoch + datetime.timedelta(0,60)
+                        epoch = epoch + datetime.timedelta(0,1)
                         attr_map[selectedFeature.id()] = {idx: formatted }
 
             self.selectedLineLayer.dataProvider().changeAttributeValues(attr_map)
