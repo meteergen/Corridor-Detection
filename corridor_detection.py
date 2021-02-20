@@ -25,29 +25,24 @@ from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction ,QMessageBox, QFileDialog, QInputDialog
 from qgis.core import *
-from qgis.gui import QgsMapToolIdentifyFeature, QgsMapToolIdentify, QgsMapToolPan  #Imported manually
-from qgis.utils import iface                                         #Imported manually
+from qgis.gui import QgsMapToolIdentify, QgsMapToolPan, QgsMapToolIdentifyFeature, QgsMapToolIdentify 
+from qgis.utils import iface                                       
 from PyQt5.QtCore import QVariant, Qt, QDateTime
 from PyQt5.QtGui import *
 
-
 # Initialize Qt resources from file resources.py
 from .resources import *
-# Import the code for the dialog
+
+# Local Imports
 from .corridor_detection_dialog import CorridorDetectionDialog
 from .corridor_detection_selection_dialog import SelectionDialog
 
 import os.path
 import csv
-import networkx as nx
+import networkx as nx   # 3rd party libraries
 import math
 import datetime
 import time
-
-
-
-
-        
 
 class CorridorDetection():
     """QGIS Plugin Implementation."""
@@ -208,7 +203,7 @@ class CorridorDetection():
         self.dlg.layerComboBox.clear()
         self.dlg.lineEdit.clear()
 
-    # When field changed, changed that also in the selectTool class
+    # When field changed, changed that also in the SelectTool class
     def changeField(self,fieldNamesLayer):
         if not self.t == 0:
             self.t.nodes = []
@@ -225,8 +220,6 @@ class CorridorDetection():
     # Dijktras Algorithm for detection of corridors
     def runAlgorithm(self):
         t0 = time.time()
-
-
         try:
             self.corridor_segments = self.t.nodes[::-1]
             
@@ -283,10 +276,7 @@ class CorridorDetection():
                         attr_map[selectedFeature.id()] = {idx: formatted }
 
             self.selectedLineLayer.dataProvider().changeAttributeValues(attr_map)
-                
-
-        
-        
+            
     # Load layers and fields to combobox when index changed
     def load_comboBox(self):
         """Load the fields into combobox when layers are changed"""
@@ -523,7 +513,7 @@ class CorridorDetection():
         selectedLayerIndex = self.dlg.layerComboBox.currentIndex()
         selectedLayer = lineLayers_shp[selectedLayerIndex]
 
-        self.t = selectTool(self.iface,selectedLayer,self)
+        self.t = SelectTool(self.iface, selectedLayer, self)
         
         #self.t.featureIdentified.connect(self.t.onFeatureIdentified) # Selecting only one
         
@@ -538,7 +528,7 @@ class CorridorDetection():
             self.adj_matrix = False
             pass
           
-class selectTool(QgsMapToolIdentifyFeature):
+class SelectTool(QgsMapToolIdentifyFeature):
 
     def __init__(self, iface, layer, obj):
         self.iface = iface
@@ -551,11 +541,8 @@ class selectTool(QgsMapToolIdentifyFeature):
         self.buttonValue = False
         QgsMapToolIdentifyFeature.__init__(self, self.canvas, self.layer)
         
-        
- 
     # If active layer changed, remove selection and initialize selection list.   
     def active_changed(self, layer):            
-        #print("active changed : ",layer.name())
         self.nodes = []
         self.layer.removeSelection()
         if isinstance(layer, QgsVectorLayer) and layer.isSpatial():
@@ -563,7 +550,7 @@ class selectTool(QgsMapToolIdentifyFeature):
             self.setLayer(self.layer)
 
     # Convert generated path to sql for selecting by expression method *( "corridor_id" in tuple() )*
-    def convertPath2SQL(self,path):
+    def convertPath2SQL(self, path):
         sql_string = ' "{}" in '.format(self.field) + str(tuple(path))
         return sql_string        
         
@@ -576,12 +563,11 @@ class selectTool(QgsMapToolIdentifyFeature):
         self.nodes = []
         self.obj.displayPath(self.nodes)
 
-    def selectFeatures(self,path):
+    def selectFeatures(self, path):
         self.exp = self.convertPath2SQL(path)
         self.layer.selectByExpression(self.exp)
 
-    def degree_to_cardinal(self,d):
-        
+    def degree_to_cardinal(self, d):
         dirs = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW']
         ix = round(d / (360. / len(dirs)))
         return dirs[ix % len(dirs)]
@@ -589,7 +575,6 @@ class selectTool(QgsMapToolIdentifyFeature):
     # Creates selection tool and selects features when clicked
     # event.button() gives the event's source button (right click : 2, left click : 1)
     def canvasPressEvent(self, event):
-        
         found_features = self.identify(event.x(), event.y(), [self.layer], QgsMapToolIdentify.DefaultQgsSetting)
 
         if not len(found_features) > 2:
@@ -748,35 +733,36 @@ class selectTool(QgsMapToolIdentifyFeature):
                                 self.nodes.insert(self.deselectedSegmentIndex,chooseSegmentList[1].mFeature[self.field])
                                 self.layer.selectByIds([chooseSegmentList[1].mFeature.id()], QgsVectorLayer.AddToSelection)
                             self.deselectedSegmentIndex += 1
-                            
-                elif event.button() == 2:   # If there is a right click (User should warn if there are twin segments )
+                
+                # If there is a right click (User should be warned if there are twin segments)
+                elif event.button() == 2:   
                     if len(found_features) == 2:
-                        featureOne = found_features[0].mFeature
-                        featureTwo = found_features[1].mFeature
-                        geomOne = featureOne.geometry()
-                        geomTwo = featureTwo.geometry()
-                        if geomOne.constGet()[0][0].x() == geomTwo.constGet()[0][1].x():
-                            if geomOne.constGet()[0][1].y() == geomTwo.constGet()[0][0].y():
-                                try:
-                                    # Delete the founded one
-                                    index = self.nodes.index(featureOne[self.field])
-                                    self.layer.deselect(featureOne.id())
-                                    del self.nodes[index]
-                                    tempIndex = index
-                                    # Add the other twin to selection
-                                    self.nodes.insert(tempIndex,featureTwo[self.field])
-                                    self.layer.selectByIds([featureTwo.id()], QgsVectorLayer.AddToSelection)
-                                    
-                                except ValueError:
-                                    # Delete the founded one
-                                    index = self.nodes.index(featureTwo[self.field])
-                                    self.layer.deselect(featureTwo.id())
-                                    del self.nodes[index]
-                                    tempIndex = index
-                                     # Add the other twin to selection
-                                    self.nodes.insert(tempIndex,featureOne[self.field])
-                                    self.layer.selectByIds([featureOne.id()], QgsVectorLayer.AddToSelection)
+                        if found_features[0].mFeature[self.field] in self.nodes or found_features[1].mFeature[self.field] in self.nodes:
+                            featureOne = found_features[0].mFeature
+                            featureTwo = found_features[1].mFeature
+                            geomOne = featureOne.geometry()
+                            geomTwo = featureTwo.geometry()
+                            if geomOne.constGet()[0][0].x() == geomTwo.constGet()[0][1].x():
+                                if geomOne.constGet()[0][1].y() == geomTwo.constGet()[0][0].y():
+                                    try:
+                                        # Delete the founded one
+                                        index = self.nodes.index(featureOne[self.field])
+                                        self.layer.deselect(featureOne.id())
+                                        del self.nodes[index]
+                                        tempIndex = index
+                                        # Add the other twin to selection
+                                        self.nodes.insert(tempIndex,featureTwo[self.field])
+                                        self.layer.selectByIds([featureTwo.id()], QgsVectorLayer.AddToSelection)
+                                        
+                                    except ValueError:
+                                        # Delete the founded one
+                                        index = self.nodes.index(featureTwo[self.field])
+                                        self.layer.deselect(featureTwo.id())
+                                        del self.nodes[index]
+                                        tempIndex = index
+                                        # Add the other twin to selection
+                                        self.nodes.insert(tempIndex,featureOne[self.field])
+                                        self.layer.selectByIds([featureOne.id()], QgsVectorLayer.AddToSelection)
 
                       
         self.obj.displayPath(self.nodes)
-        
