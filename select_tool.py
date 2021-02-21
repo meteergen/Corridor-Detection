@@ -1,3 +1,5 @@
+__author__ = "Metehan Ergen"
+
 from qgis.gui import QgsMapToolIdentify, QgsMapToolPan, QgsMapToolIdentifyFeature
 from qgis.core import *
 import math
