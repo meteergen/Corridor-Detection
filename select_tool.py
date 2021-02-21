@@ -1,4 +1,5 @@
 __author__ = "Metehan Ergen"
+__date__ = "21.02.2021"
 
 from qgis.gui import QgsMapToolIdentify, QgsMapToolPan, QgsMapToolIdentifyFeature
 from qgis.core import *
