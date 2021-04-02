@@ -47,7 +47,7 @@ import time
 
 class CorridorDetection():
     """QGIS Plugin Implementation."""
-    
+
     def __init__(self, iface):
         """Constructor.
 
@@ -273,9 +273,6 @@ class CorridorDetection():
 
             # Add the last segment of the corridor
             self.path.append(self.corridor_segments[c+1])
-        
-            # str1 = "["+', '.join(str(e) for e in self.path)+"]"
-            # self.dlg.textBrowser_2.setText(str(str1))
 
             # Fix: they should be selected by their object id's.
             self.t.selectFeatures(self.path)
@@ -387,12 +384,12 @@ class CorridorDetection():
         self.dlg.lineEdit_2.setText(filename)
 
     def export_to_csv(self):
-        # There is a better control need
-        if len(self.dlg.lineEdit_3.text()) < 2:
+        # ...
+        if len(self.dlg.lineEdit_3.text()) == '':
             self.error_msg("Please type the corridor id !")
             return False
 
-        if len(self.dlg.lineEdit_2.text()) < 2:
+        if len(self.dlg.lineEdit_2.text()) == '':
             self.error_msg("Please select the output csv file")
             return False
             
@@ -403,13 +400,14 @@ class CorridorDetection():
         
         with open(self.dlg.lineEdit_2.text()+'/'+self.dlg.lineEdit_3.text()+'.csv', "w",newline = "") as f:
             writer = csv.writer(f)
+            idxField = self.selectedLineLayer.fields().indexFromName(self.t.field)
             for node in self.path:
                 for feature in features:
                     if str(feature[self.t.field]) == str(node):
-                        feature2write = feature.attributes()[1]
+                        feature2write = feature.attributes()[idxField]
                         writer.writerow([feature2write])
             f.close()
-            self.success_msg("Data successfully exported")
+            self.success_msg("Ordered data successfully exported")
 
             self.selectedLineLayer.startEditing()
             for feature in features:
