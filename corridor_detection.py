@@ -47,6 +47,7 @@ import time
 
 class CorridorDetection():
     """QGIS Plugin Implementation."""
+    
     def __init__(self, iface):
         """Constructor.
 
@@ -229,14 +230,12 @@ class CorridorDetection():
                 self.G.add_weighted_edges_from( [(segment, self.adj_matrix[segment][neigh], {'distance':1})] ) 
 
     # Select adjacency matrix file
-    def select_adj_file(self):     
+    def select_adj_file(self):    
         filename, _filter = QFileDialog.getOpenFileName(self.dlg, "Select adj file ")
         self.dlg.lineEdit.setText(filename)
 
         # Create empty dictionaries
         adj_matrix = dict()
-        #visited = dict()
-        print("TEST PROTOCOL 444")
         print(self.dlg.lineEdit.text())
         
         # Open the adjacency matrix provided
@@ -245,6 +244,7 @@ class CorridorDetection():
                 csv_reader = csv.reader(csv_file, delimiter=',')
                 line_count = 0
                 for row in csv_reader:
+                    # self.dlg.progressBar.setValue(line_count*100/len(csv_reader)) 
                     adj_matrix[row[0]] = row[1:len(row)]
                     line_count += 1
             self.adj_matrix = adj_matrix
@@ -253,7 +253,6 @@ class CorridorDetection():
             self.error_msg("Please select a proper adjacency matrix file !")
             return False
         
-    
     # Dijktras Algorithm for detection of corridors
     def runAlgorithm(self):
         t0 = time.time()
@@ -262,7 +261,6 @@ class CorridorDetection():
             if len(self.corridor_segments) < 2:
                 self.error_msg("Select at least two segments !")
                 return False
-            
             
             self.path = []
             for c in range(len(self.corridor_segments)-1):
@@ -288,23 +286,6 @@ class CorridorDetection():
         except:
             self.error_msg("Please select a valid adjacency file")
             return False
-
-    def visualize(self):
-        if not len(self.path) < 1:
-            epoch = datetime.datetime.fromisoformat('2020-01-01T10:00:00')
-            #epoch = QDateTime.fromString('2020-12-12 12:00:00','yyyy-MM-dd hh:mm:ss')
-            
-            idx = self.selectedLineLayer.fields().indexFromName("time")
-            attr_map = {}
-            for node in self.path:
-                for selectedFeature in self.selectedLineLayer.selectedFeatures():
-                    if node == selectedFeature[self.t.field]:
-                        #epoch.addSecs(30) # days, seconds, then other fields.
-                        formatted = epoch.strftime('%Y-%m-%dT%H:%M:%S')
-                        epoch = epoch + datetime.timedelta(0,1)
-                        attr_map[selectedFeature.id()] = {idx: formatted }
-
-            self.selectedLineLayer.dataProvider().changeAttributeValues(attr_map)
             
     # Load layers and fields to combobox when index changed
     def load_comboBox(self):
@@ -325,7 +306,6 @@ class CorridorDetection():
                         continue
                 
         self.selectedLineLayerIndex = self.dlg.layerComboBox.currentIndex()
-        
         if self.selectedLineLayerIndex < 0 or self.selectedLineLayerIndex > len(lineLayers_shp):
             return
         try:
@@ -342,13 +322,11 @@ class CorridorDetection():
             self.t.field = fieldNamesLayer[self.dlg.fieldsComboBox.currentIndex()]
             self.t.active_changed(self.selectedLineLayer)
             self.iface.mapCanvas().setMapTool(self.t)
-
         self.dlg.fieldsComboBox.currentIndexChanged.connect(lambda: self.changeField(fieldNamesLayer))
         
 
     # Load layers to combobox when plugin started
     def loadLayerList(self):
-   
         lineLayersList = []
         lineLayers_shp = []
         # Show the shapefiles in the ComboBox
@@ -428,7 +406,7 @@ class CorridorDetection():
             for node in self.path:
                 for feature in features:
                     if str(feature[self.t.field]) == str(node):
-                        feature2write = feature.attributes()[0]
+                        feature2write = feature.attributes()[1]
                         writer.writerow([feature2write])
             f.close()
             self.success_msg("Data successfully exported")
@@ -440,7 +418,6 @@ class CorridorDetection():
             self.selectedLineLayer.commitChanges()
             
     def prepare_layer(self):
-       
         # Add selected field for rule based selection
         fields = self.selectedLineLayer.fields().names()
         fields2add = ["visited","time"]
@@ -484,7 +461,6 @@ class CorridorDetection():
             self.dlg.pushButton_2.clicked.connect(self.runAlgorithm)
             self.dlg.pushButton_csv.clicked.connect(self.export_to_csv)
             self.dlg.prepareButton.clicked.connect(self.prepare_layer)
-            self.dlg.visualizeButton.clicked.connect(self.visualize)
 
             # Make gui always in front of qgis
             self.dlg.setWindowFlags(Qt.WindowStaysOnTopHint)

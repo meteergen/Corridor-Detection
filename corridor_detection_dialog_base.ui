@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>523</width>
-    <height>378</height>
+    <height>409</height>
    </rect>
   </property>
   <property name="focusPolicy">
@@ -44,7 +44,7 @@
          <rect>
           <x>16</x>
           <y>20</y>
-          <width>291</width>
+          <width>181</width>
           <height>20</height>
          </rect>
         </property>
@@ -134,7 +134,7 @@
       </attribute>
       <layout class="QGridLayout">
        <item row="0" column="0" rowspan="2" colspan="2">
-        <layout class="QGridLayout" name="gridLayout" rowstretch="0,0,0,0,0,0,0" columnstretch="20,25,20">
+        <layout class="QGridLayout" name="gridLayout" rowstretch="0,0,0,0,0,0" columnstretch="20,0,0">
          <property name="sizeConstraint">
           <enum>QLayout::SetMinimumSize</enum>
          </property>
@@ -147,11 +147,49 @@
          <property name="spacing">
           <number>6</number>
          </property>
-         <item row="4" column="0" colspan="3">
-          <widget class="QTextBrowser" name="textBrowser"/>
+         <item row="1" column="0">
+          <widget class="QLabel" name="label_6">
+           <property name="text">
+            <string>Unique Attribute Column</string>
+           </property>
+          </widget>
+         </item>
+         <item row="5" column="1">
+          <widget class="QPushButton" name="returnSelectionButton">
+           <property name="text">
+            <string>Return Selection</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QComboBox" name="layerComboBox"/>
+         </item>
+         <item row="2" column="0">
+          <widget class="QLabel" name="label_7">
+           <property name="text">
+            <string>Select adjacency file</string>
+           </property>
+          </widget>
          </item>
          <item row="1" column="2">
           <widget class="QLineEdit" name="lineEdit_3"/>
+         </item>
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_5">
+           <property name="text">
+            <string>Select Input Layer</string>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="0" colspan="3">
+          <widget class="QTextBrowser" name="textBrowser"/>
+         </item>
+         <item row="3" column="0">
+          <widget class="QLabel" name="label_8">
+           <property name="text">
+            <string>Select output .csv file</string>
+           </property>
+          </widget>
          </item>
          <item row="2" column="1">
           <widget class="QLineEdit" name="lineEdit"/>
@@ -159,10 +197,24 @@
          <item row="3" column="1">
           <widget class="QLineEdit" name="lineEdit_2"/>
          </item>
+         <item row="3" column="2">
+          <widget class="QToolButton" name="toolButtonOut">
+           <property name="text">
+            <string>...</string>
+           </property>
+          </widget>
+         </item>
          <item row="2" column="2">
           <widget class="QToolButton" name="toolButtonAdj">
            <property name="text">
             <string>...</string>
+           </property>
+          </widget>
+         </item>
+         <item row="5" column="0">
+          <widget class="QPushButton" name="pushButton">
+           <property name="text">
+            <string>Remove Selection</string>
            </property>
           </widget>
          </item>
@@ -183,78 +235,12 @@
          <item row="1" column="1">
           <widget class="QComboBox" name="fieldsComboBox"/>
          </item>
-         <item row="0" column="1">
-          <widget class="QComboBox" name="layerComboBox"/>
-         </item>
-         <item row="3" column="2">
-          <widget class="QToolButton" name="toolButtonOut">
-           <property name="text">
-            <string>...</string>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="0">
-          <widget class="QLabel" name="label_7">
-           <property name="text">
-            <string>Select adjacency file</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="0">
-          <widget class="QLabel" name="label_5">
-           <property name="text">
-            <string>Select Input Layer</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="0">
-          <widget class="QLabel" name="label_6">
-           <property name="text">
-            <string>Unique Attribute Column</string>
-           </property>
-          </widget>
-         </item>
-         <item row="3" column="0">
-          <widget class="QLabel" name="label_8">
-           <property name="text">
-            <string>Select output .csv file</string>
-           </property>
-          </widget>
-         </item>
-         <item row="6" column="0">
-          <widget class="QCheckBox" name="checkBoxManuel">
-           <property name="text">
-            <string>Manual Selection</string>
-           </property>
-          </widget>
-         </item>
-         <item row="5" column="1">
-          <widget class="QPushButton" name="returnSelectionButton">
-           <property name="text">
-            <string>Return Selection</string>
-           </property>
-          </widget>
-         </item>
-         <item row="5" column="0">
-          <widget class="QPushButton" name="pushButton">
-           <property name="text">
-            <string>Remove Selection</string>
-           </property>
-          </widget>
-         </item>
         </layout>
        </item>
        <item row="2" column="1">
         <widget class="QPushButton" name="pushButton_csv">
          <property name="text">
           <string>export to csv</string>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="0">
-        <widget class="QPushButton" name="visualizeButton">
-         <property name="text">
-          <string>Visualize</string>
          </property>
         </widget>
        </item>
