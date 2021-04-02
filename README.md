@@ -1,8 +1,6 @@
 # Corridor-Detection
 A QGIS plugin for corridor ordering on network data with Dijktra's Algorithm.
 
-<img src = "https://github.com/meteergen/Corridor-Detection/blob/master/gif/corridor_detection_ankara.gif" width ="500" /> 
-
 ___
 ### Installation
 **1)**  Clone or download the zip of the repository  
