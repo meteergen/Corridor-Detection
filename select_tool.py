@@ -74,8 +74,8 @@ class SelectTool(QgsMapToolIdentifyFeature):
                         if len(found_features) == 2:
                             firstSegment = found_features[0].mFeature
                             secondSegment = found_features[1].mFeature
-                            firstSegmentStr = firstSegment[self.field],self.degree_to_cardinal(180/math.pi*QgsGeometryUtils.lineAngle(firstSegment.geometry().constGet()[0][0].x(), firstSegment.geometry().constGet()[0][0].y(), firstSegment.geometry().constGet()[0][1].x(), firstSegment.geometry().constGet()[0][1].y() ))
-                            secondSegmentStr = secondSegment[self.field],self.degree_to_cardinal(180/math.pi*QgsGeometryUtils.lineAngle(secondSegment.geometry().constGet()[0][0].x(), secondSegment.geometry().constGet()[0][0].y(), secondSegment.geometry().constGet()[0][1].x(), secondSegment.geometry().constGet()[0][1].y() ))
+                            firstSegmentStr = firstSegment[self.field],self.degree_to_cardinal(180/math.pi*QgsGeometryUtils.lineAngle(firstSegment.geometry().constGet().startPoint().x(), firstSegment.geometry().constGet().startPoint().y(), firstSegment.geometry().constGet().endPoint().x(), firstSegment.geometry().constGet().endPoint().y() ))
+                            secondSegmentStr = secondSegment[self.field],self.degree_to_cardinal(180/math.pi*QgsGeometryUtils.lineAngle(secondSegment.geometry().constGet().startPoint().x(), secondSegment.geometry().constGet().startPoint().y(), secondSegment.geometry().constGet().endPoint().x(), secondSegment.geometry().constGet().endPoint().y() ))
                      
                             self.obj.dlg_Selection.firstButton.setText(str(firstSegmentStr))
                             self.obj.dlg_Selection.secondButton.setText(str(secondSegmentStr))
@@ -127,9 +127,9 @@ class SelectTool(QgsMapToolIdentifyFeature):
                                 chooseSegmentList.append(found_features[i])
                                 
                         if len(chooseSegmentList) == 2:
-                            lastFeaturePoint = self.lastSegment.geometry().constGet()[0][0]
-                            first = chooseSegmentList[0].mFeature.geometry().constGet()[0][0]
-                            second = chooseSegmentList[1].mFeature.geometry().constGet()[0][0]
+                            lastFeaturePoint = self.lastSegment.geometry().constGet().startPoint()
+                            first = chooseSegmentList[0].mFeature.geometry().constGet().startPoint()
+                            second = chooseSegmentList[1].mFeature.geometry().constGet().startPoint()
                             
                             if lastFeaturePoint.distance(first) < lastFeaturePoint.distance(second):
                                 self.nodes.insert(self.deselectedSegmentIndex,chooseSegmentList[0].mFeature[self.field])
@@ -148,8 +148,8 @@ class SelectTool(QgsMapToolIdentifyFeature):
                             featureTwo = found_features[1].mFeature
                             geomOne = featureOne.geometry()
                             geomTwo = featureTwo.geometry()
-                            if geomOne.constGet()[0][0].x() == geomTwo.constGet()[0][1].x():
-                                if geomOne.constGet()[0][1].y() == geomTwo.constGet()[0][0].y():
+                            if geomOne.constGet().startPoint().x() == geomTwo.constGet().endPoint().x():
+                                if geomOne.constGet().endPoint().y() == geomTwo.constGet().startPoint().y():
                                     try:
                                         # Delete the founded one
                                         index = self.nodes.index(featureOne[self.field])

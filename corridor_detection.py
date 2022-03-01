@@ -239,50 +239,51 @@ class CorridorDetection():
         print(self.dlg.lineEdit.text())
         
         # Open the adjacency matrix provided
-        try:
-            with open(self.dlg.lineEdit.text()) as csv_file:    
-                csv_reader = csv.reader(csv_file, delimiter=',')
-                line_count = 0
-                for row in csv_reader:
-                    # self.dlg.progressBar.setValue(line_count*100/len(csv_reader)) 
-                    adj_matrix[row[0]] = row[1:len(row)]
-                    line_count += 1
-            self.adj_matrix = adj_matrix
-            self.load_graph()   # load the graph
-        except:
-            self.error_msg("Please select a proper adjacency matrix file !")
-            return False
+        # try:
+        with open(self.dlg.lineEdit.text()) as csv_file:    
+            csv_reader = csv.reader(csv_file, delimiter=',')
+            line_count = 0
+            for row in csv_reader:
+                # self.dlg.progressBar.setValue(line_count*100/len(csv_reader)) 
+                adj_matrix[row[0]] = row[1:len(row)]
+                line_count += 1
+        self.adj_matrix = adj_matrix
+        
+        self.load_graph()   # load the graph
+        # except:
+        #     self.error_msg("Please select a proper adjacency matrix file !")
+        #     return False
         
     # Dijktras Algorithm for detection of corridors
     def runAlgorithm(self):
         t0 = time.time()
-        try:
-            self.corridor_segments = self.t.nodes[::-1]
-            if len(self.corridor_segments) < 2:
-                self.error_msg("Select at least two segments !")
-                return False
-            
-            self.path = []
-            for c in range(len(self.corridor_segments)-1):
-                temp_path = nx.shortest_path(self.G, source = self.corridor_segments[c], target = self.corridor_segments[c+1])
-                # Remove the last element in the path - it will be included in the next iteration
-                temp_path.pop()
-                # if we path.append(temp_path), we will generate a 2D list. Instead copy each segment one-by-one
-                for i in range(len(temp_path)):
-                    self.path.append(temp_path[i])
-
-            # Add the last segment of the corridor
-            self.path.append(self.corridor_segments[c+1])
-
-            # Fix: they should be selected by their object id's.
-            self.t.selectFeatures(self.path)
-            #self.selectedLineLayer.selectByExpression(res)
-            t1 = time.time()
-            total = t1-t0
-            print("runtime: ",total)
-        except:
-            self.error_msg("Please select a valid adjacency file")
+        # try:
+        self.corridor_segments = self.t.nodes[::-1]
+        if len(self.corridor_segments) < 2:
+            self.error_msg("Select at least two segments !")
             return False
+        
+        self.path = []
+        for c in range(len(self.corridor_segments)-1):
+            temp_path = nx.shortest_path(self.G, source = str(self.corridor_segments[c]), target = str(self.corridor_segments[c+1]))
+            # Remove the last element in the path - it will be included in the next iteration
+            temp_path.pop()
+            # if we path.append(temp_path), we will generate a 2D list. Instead copy each segment one-by-one
+            for i in range(len(temp_path)):
+                self.path.append(temp_path[i])
+
+        # Add the last segment of the corridor
+        self.path.append(self.corridor_segments[c+1])
+
+        # Fix: they should be selected by their object id's.
+        self.t.selectFeatures(self.path)
+        #self.selectedLineLayer.selectByExpression(res)
+        t1 = time.time()
+        total = t1-t0
+        print("runtime: ",total)
+        # except:
+        #     self.error_msg("Please select a valid adjacency file")
+        #     return False
             
     # Load layers and fields to combobox when index changed
     def load_comboBox(self):
