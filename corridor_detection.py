@@ -21,6 +21,7 @@
  *                                                                         *
  ***************************************************************************/
 """ 
+from dataclasses import dataclass
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction ,QMessageBox, QFileDialog, QInputDialog
@@ -29,6 +30,7 @@ from qgis.gui import QgsMapToolIdentify, QgsMapToolPan, QgsMapToolIdentifyFeatur
 from qgis.utils import iface                                       
 from PyQt5.QtCore import QVariant, Qt, QDateTime
 from PyQt5.QtGui import *
+import pandas
 
 # Initialize Qt resources from file resources.py
 from .resources import *
@@ -253,9 +255,12 @@ class CorridorDetection():
         # except:
         #     self.error_msg("Please select a proper adjacency matrix file !")
         #     return False
-        
+    
+    
+
     # Dijktras Algorithm for detection of corridors
     def runAlgorithm(self):
+        print("nodes", self.t.nodes)
         t0 = time.time()
         # try:
         self.corridor_segments = self.t.nodes[::-1]
@@ -274,7 +279,16 @@ class CorridorDetection():
 
         # Add the last segment of the corridor
         self.path.append(self.corridor_segments[c+1])
+        print("self.path", self.path)
 
+        self.alg_nodes =[]
+        for p in range(len(self.path)):
+            d = self.path[p]
+            self.alg_nodes.append(d)
+        self.t.alg_nodes = self.alg_nodes[::-1]
+
+        # print("alg_nodes", self.alg_nodes)
+        
         # Fix: they should be selected by their object id's.
         self.t.selectFeatures(self.path)
         #self.selectedLineLayer.selectByExpression(res)
@@ -285,6 +299,8 @@ class CorridorDetection():
         #     self.error_msg("Please select a valid adjacency file")
         #     return False
             
+        
+
     # Load layers and fields to combobox when index changed
     def load_comboBox(self):
         """Load the fields into combobox when layers are changed"""

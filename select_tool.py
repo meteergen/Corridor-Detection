@@ -1,6 +1,7 @@
 __author__ = "Metehan Ergen"
 __date__ = "21.02.2021"
 
+from cProfile import label
 from qgis.gui import QgsMapToolIdentify, QgsMapToolPan, QgsMapToolIdentifyFeature
 from qgis.core import *
 import math
@@ -14,6 +15,7 @@ class SelectTool(QgsMapToolIdentifyFeature):
         self.nodes = []
         self.obj = obj
         self.field = ""
+        self.alg_nodes = []
         self.deselectedSegmentIndex = False
         self.buttonValue = False
         QgsMapToolIdentifyFeature.__init__(self, self.canvas, self.layer)
@@ -32,12 +34,15 @@ class SelectTool(QgsMapToolIdentifyFeature):
         return sql_string        
         
     def selectPrevious(self):
+        self.alg_nodes = []
         prevSelectExp = self.convertPath2SQL(self.nodes)
         self.layer.selectByExpression(prevSelectExp)
+  
 
     def deactivate(self):
         self.layer.removeSelection()
         self.nodes = []
+        self.alg_nodes = []
         self.obj.displayPath(self.nodes)
 
     def selectFeatures(self, path):
@@ -53,6 +58,7 @@ class SelectTool(QgsMapToolIdentifyFeature):
     # event.button() gives the event's source button (right click : 2, left click : 1)
     def canvasPressEvent(self, event):
         found_features = self.identify(event.x(), event.y(), [self.layer], QgsMapToolIdentify.DefaultQgsSetting)
+        print("alg_nodes", self.alg_nodes)
 
         if not len(found_features) > 2:
             if not len(found_features) == 0:
@@ -62,7 +68,9 @@ class SelectTool(QgsMapToolIdentifyFeature):
                         lastSegment = self.nodes[-1]
                         
                         for i in self.layer.selectedFeatures():
+                            # print("i", i)
                             if i[self.field] == lastSegment:
+                                # print("i.field", i[self.field] )
                                 self.lastSegment = i
                                 
                         print(lastSegment)
@@ -94,37 +102,99 @@ class SelectTool(QgsMapToolIdentifyFeature):
                             self.nodes.insert(self.deselectedSegmentIndex,found_features[0].mFeature[self.field])
                             self.layer.selectByIds([found_features[0].mFeature.id()], QgsVectorLayer.AddToSelection)
                         self.deselectedSegmentIndex += 1
-
+                        
+                        if len(self.nodes)>1:
+                            self.obj.runAlgorithm() 
                     # If only one feature found when clicked
                     elif len(found_features) == 1:
-
+                    
                         for i in range(len(found_features)):
-                            if found_features[i].mFeature[self.field] in self.nodes:
-                                self.layer.deselect(found_features[i].mFeature.id())
-                                for j in range(len(self.nodes)):
-                                    if found_features[i].mFeature[self.field] == self.nodes[j]:
-                                        self.deselectedSegmentIndex = j
-                                        del self.nodes[j]
-                                        break
+                            if found_features[i].mFeature[self.field] in self.alg_nodes:
+                                index_del = self.alg_nodes.index(found_features[i].mFeature[self.field])
+                                lay = [feat for feat in self.layer.getSelectedFeatures()]
+
+                                
+                                for delete in range(index_del+1, len(self.alg_nodes)):
+                                    print("delete", delete)
+                                    print("alg", self.alg_nodes)
+                                    # idx = index_del + delete + 1
+                                    seg = self.alg_nodes[delete] 
+
+                                   
+                                    print("seg", seg)
+                                    for s in lay:        
+                                        print(s['segmentID'], seg)                                                               
+                                        if s['segmentID'] == seg:
+                                           
+                                            self.layer.deselect(s.id())
+                                            continue
+
+                                    if seg in self.nodes:
+                                        node_index = self.nodes.index(seg)
+                                        self.deselectedSegmentIndex = node_index
+                                        del self.nodes[node_index]
+                                        
+                                
+                                del self.alg_nodes[index_del+1:len(self.alg_nodes)]
+
+                                # for j in range(len(self.nodes)):
+                                #     if found_features[i].mFeature[self.field] == self.nodes[j]:
+                                #         self.deselectedSegmentIndex = j
+                                #         del self.nodes[j]
+                                #         break
                             else:
                                 self.nodes.insert(self.deselectedSegmentIndex,found_features[i].mFeature[self.field])
                                 self.deselectedSegmentIndex += 1
                                 #self.lastSegment = found_features[i]
                                 self.layer.selectByIds([found_features[i].mFeature.id()], QgsVectorLayer.AddToSelection)
+                                if len(self.nodes)>1:
+                                    self.obj.runAlgorithm() 
 
                     # If two features found when clicked 
                     elif len(found_features) == 2:
+                    
+                        for i in range(len(found_features)):
+                            print("foundFeatures", found_features[i].mFeature[self.field])
                         chooseSegmentList = []
                         for i in range(len(found_features)):
-                            if found_features[i].mFeature[self.field] in self.nodes:
-                                self.layer.deselect(found_features[i].mFeature.id())
-                                for j in range(len(self.nodes)):
-                                    if found_features[i].mFeature[self.field] == self.nodes[j]:
-                                        self.deselectedSegmentIndex = j
-                                        del self.nodes[j]
-                                        break   
+                            if found_features[i].mFeature[self.field] in self.alg_nodes:
+                                index_del = self.alg_nodes.index(found_features[i].mFeature[self.field])
+                                lay = [feat for feat in self.layer.getSelectedFeatures()]
+
+                                
+                                for delete in range(index_del+1, len(self.alg_nodes)):
+                                    print("delete", delete)
+                                    print("alg", self.alg_nodes)
+                                    # idx = index_del + delete + 1
+                                    seg = self.alg_nodes[delete] 
+
+ 
+                                    
+                                    print("seg", seg)
+                                    for s in lay:        
+                                        print(s['segmentID'], seg)                                                               
+                                        if s['segmentID'] == seg:
+                                           
+                                            self.layer.deselect(s.id())
+                                            continue
+
+                                    if seg in self.nodes:
+                                        node_index = self.nodes.index(seg)
+                                        self.deselectedSegmentIndex = node_index
+                                        del self.nodes[node_index]
+                                         
+
+                                
+                                del self.alg_nodes[index_del+1:len(self.alg_nodes)]
+
+                                # for j in range(len(self.nodes)):
+                                #     if found_features[i].mFeature[self.field] == self.nodes[j]:
+                                #         self.deselectedSegmentIndex = j
+                                #         del self.nodes[j]
+                                #         break   
                             else:
                                 chooseSegmentList.append(found_features[i])
+                                print("bp2")
                                 
                         if len(chooseSegmentList) == 2:
                             lastFeaturePoint = self.lastSegment.geometry().constGet().startPoint()
@@ -132,13 +202,21 @@ class SelectTool(QgsMapToolIdentifyFeature):
                             second = chooseSegmentList[1].mFeature.geometry().constGet().startPoint()
                             
                             if lastFeaturePoint.distance(first) < lastFeaturePoint.distance(second):
+                                print("bp3")
                                 self.nodes.insert(self.deselectedSegmentIndex,chooseSegmentList[0].mFeature[self.field])
                                 self.layer.selectByIds([chooseSegmentList[0].mFeature.id()], QgsVectorLayer.AddToSelection)
+                                
 
                             else:
+                                print("bp4")
                                 self.nodes.insert(self.deselectedSegmentIndex,chooseSegmentList[1].mFeature[self.field])
                                 self.layer.selectByIds([chooseSegmentList[1].mFeature.id()], QgsVectorLayer.AddToSelection)
                             self.deselectedSegmentIndex += 1
+
+                            if len(self.nodes)>1:
+                                self.obj.runAlgorithm()  
+
+                       
                 
                 # If there is a right click (User should be warned if there are twin segments)
                 elif event.button() == 2:   
@@ -172,3 +250,8 @@ class SelectTool(QgsMapToolIdentifyFeature):
 
                       
         self.obj.displayPath(self.nodes)
+        # Only run the algorithm when at least two segments are selected.
+        # if len(self.nodes)>1:
+        #     self.obj.runAlgorithm() 
+        #     print("Çalıştı")
+        
